@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Earnings">
+    
+    <title>Live Earnings Tracker</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #000000;
+            --text-color: #ffffff;
+            --accent-color: #0a84ff; /* Apple System Blue */
+            --border-color: #1c1c1e; /* Standard iOS dark border */
+            --glow-color: rgba(10, 132, 255, 0.5);
+            --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-stack);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            /* Prevents pull-to-refresh behavior when acting as an app */
+            overscroll-behavior-y: none; 
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2.5rem 2rem;
+            border-radius: 24px; /* Slightly softer Apple-style corners */
+            text-align: center;
+            margin: 1rem;
+            width: 85%;
+            max-width: 450px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        h2 { 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            color: #8e8e93; /* iOS System Gray */
+            margin-bottom: 0.75rem; 
+            font-weight: 600;
+        }
+
+        .balance {
+            font-size: 3rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin: 1rem 0;
+            color: #ffffff;
+            /* Refined Apple-style neon glow */
+            text-shadow: 0 0 20px var(--glow-color), 0 0 40px rgba(10, 132, 255, 0.2);
+            letter-spacing: -1px;
+        }
+
+        .rates {
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.85rem;
+            color: #8e8e93;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .rate-item { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 6px;
+        }
+        
+        .rate-value { 
+            font-weight: 600; 
+            color: var(--accent-color); 
+            text-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Monthly Earnings</h2>
+        <div id="monthly-balance" class="balance">$0.00</div>
+        <div class="rates">
+            <div class="rate-item"><span>Per Hr</span><span id="rate-hr" class="rate-value"></span></div>
+            <div class="rate-item"><span>Per Min</span><span id="rate-min" class="rate-value"></span></div>
+            <div class="rate-item"><span>Per Sec</span><span id="rate-sec" class="rate-value"></span></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Today's Earnings</h2>
+        <div id="daily-balance" class="balance">$0.00</div>
+    </div>
+
+    <script>
+        const MONTHLY_INCOME = 96400;
+        const WORKING_DAYS = 25;
+        const HOURS_PER_DAY = 9;
+        const HOURLY_RATE = MONTHLY_INCOME / (WORKING_DAYS * HOURS_PER_DAY);
+        const MINUTE_RATE = HOURLY_RATE / 60;
+        const SECOND_RATE = MINUTE_RATE / 60;
+
+        document.getElementById('rate-hr').innerText = `$${HOURLY_RATE.toFixed(2)}`;
+        document.getElementById('rate-min').innerText = `$${MINUTE_RATE.toFixed(2)}`;
+        document.getElementById('rate-sec').innerText = `$${SECOND_RATE.toFixed(2)}`;
+
+        function updateEarnings() {
+            const now = new Date();
+            
+            // Daily Logic
+            const startOfDay = new Date(now);
+            startOfDay.setHours(9, 30, 0, 0);
+            
+            const endOfDay = new Date(now);
+            endOfDay.setHours(18, 30, 0, 0);
+            
+            let dailySeconds = 0;
+            if (now > startOfDay) {
+                const targetTime = now > endOfDay ? endOfDay : now;
+                dailySeconds = Math.max(0, (targetTime - startOfDay) / 1000);
+            }
+            const dailyBalance = dailySeconds * SECOND_RATE;
+
+            // Monthly Logic
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            let pastWorkingDays = 0;
+            let d = new Date(firstDay);
+            
+            while (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                if (d.getDay() !== 0 && pastWorkingDays < WORKING_DAYS) {
+                    pastWorkingDays++;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            
+            const totalMonthlyBalance = (pastWorkingDays * HOURS_PER_DAY * HOURLY_RATE) + dailyBalance;
+
+            // Using tabular-nums in CSS handles the width, but toLocaleString helps format
+            document.getElementById('monthly-balance').innerText = totalMonthlyBalance.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+            document.getElementById('daily-balance').innerText = dailyBalance.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+        }
+
+        setInterval(updateEarnings, 1000);
+        updateEarnings();
+    </script>
+</body>
+</html>
